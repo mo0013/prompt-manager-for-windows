@@ -1,7 +1,8 @@
 @echo off
+chcp 65001
 setlocal enabledelayedexpansion
 
-echo Œ»İ‚ÌÀsƒ|ƒŠƒV[‚ğŠm”F‚µ‚Ä‚¢‚Ü‚·...
+echo ç¾åœ¨ã®å®Ÿè¡Œãƒãƒªã‚·ãƒ¼ã‚’ç¢ºèªã—ã¦ã„ã¾ã™...
 for /f "tokens=*" %%i in ('powershell.exe -Command "Get-ExecutionPolicy -Scope CurrentUser"') do set current_policy=%%i
 
 if /i "%current_policy%" neq "RemoteSigned" (
@@ -9,25 +10,25 @@ if /i "%current_policy%" neq "RemoteSigned" (
 )
 
 if /i "%current_policy%"=="Restricted" (
-    echo Œ»İ‚ÌÀsƒ|ƒŠƒV[‚ª Restricted ‚Å‚·BRemoteSigned ‚É•ÏX‚µ‚Ü‚·...
+    echo ç¾åœ¨ã®å®Ÿè¡Œãƒãƒªã‚·ãƒ¼ãŒ Restricted ã§ã™ã€‚RemoteSigned ã«å¤‰æ›´ã—ã¾ã™...
     powershell.exe -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
 ) else if /i "%current_policy%"=="AllSigned" (
-    echo Œ»İ‚ÌÀsƒ|ƒŠƒV[‚ª AllSigned ‚Å‚·BRemoteSigned ‚É•ÏX‚µ‚Ü‚·...
+    echo ç¾åœ¨ã®å®Ÿè¡Œãƒãƒªã‚·ãƒ¼ãŒ AllSigned ã§ã™ã€‚RemoteSigned ã«å¤‰æ›´ã—ã¾ã™...
     powershell.exe -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
 ) else (
-    echo Œ»İ‚ÌÀsƒ|ƒŠƒV[: %current_policy% - •ÏX‚Í•s—v‚Å‚·B
+    echo ç¾åœ¨ã®å®Ÿè¡Œãƒãƒªã‚·ãƒ¼: %current_policy% - å¤‰æ›´ã¯ä¸è¦ã§ã™ã€‚
 )
 
-echo ƒXƒ^[ƒgƒAƒbƒv‚ÉƒVƒ‡[ƒgƒJƒbƒg‚ğì¬‚µ‚Ä‚¢‚Ü‚·...
+echo ã‚¹ã‚¿ãƒ¼ãƒˆã‚¢ãƒƒãƒ—ã«ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆã‚’ä½œæˆã—ã¦ã„ã¾ã™...
 set STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
 set SHORTCUT_NAME=PromptManager.lnk
 
-REM eƒfƒBƒŒƒNƒgƒŠ‚ÌƒpƒX‚ğæ“¾
+REM è¦ªãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã®ãƒ‘ã‚¹ã‚’å–å¾—
 for %%I in ("%~dp0..") do set "PARENT_DIR=%%~fI"
 
 powershell.exe -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%STARTUP_FOLDER%\%SHORTCUT_NAME%'); $s.TargetPath = 'powershell.exe'; $s.Arguments = '-WindowStyle Hidden -ExecutionPolicy Bypass -File ""!PARENT_DIR!\src\main.ps1""'; $s.WindowStyle = 7; $s.WorkingDirectory = '!PARENT_DIR!'; $s.Save()"
 
-echo ƒZƒbƒgƒAƒbƒv‚ªŠ®—¹‚µ‚Ü‚µ‚½B
-echo ƒXƒ^[ƒgƒAƒbƒvƒVƒ‡[ƒgƒJƒbƒg‚ªˆÈ‰º‚ÌêŠ‚Éì¬‚³‚ê‚Ü‚µ‚½:
+echo ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—ãŒå®Œäº†ã—ã¾ã—ãŸã€‚
+echo ã‚¹ã‚¿ãƒ¼ãƒˆã‚¢ãƒƒãƒ—ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆãŒä»¥ä¸‹ã®å ´æ‰€ã«ä½œæˆã•ã‚Œã¾ã—ãŸ:
 echo %STARTUP_FOLDER%\%SHORTCUT_NAME%
 pause

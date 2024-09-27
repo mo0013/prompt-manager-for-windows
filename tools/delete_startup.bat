@@ -1,7 +1,8 @@
 @echo off
+chcp 65001
 setlocal enabledelayedexpansion
 
-echo ƒXƒ^[ƒgƒAƒbƒv‚©‚çƒVƒ‡[ƒgƒJƒbƒg‚ğíœ‚µ‚Ä‚¢‚Ü‚·...
+echo ã‚¹ã‚¿ãƒ¼ãƒˆã‚¢ãƒƒãƒ—ã‹ã‚‰ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆã‚’å‰Šé™¤ã—ã¦ã„ã¾ã™...
 
 set STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
 set SHORTCUT_NAME=PromptManager.lnk
@@ -9,24 +10,24 @@ set POLICY_FILE=%~dp0powershell_policy_before_change.txt
 
 if exist "%POLICY_FILE%" (
     for /f "tokens=*" %%i in (%POLICY_FILE%) do set previous_policy=%%i
-    echo ˆÈ‘O‚ÌÀsƒ|ƒŠƒV[‚ğ•œŒ³‚µ‚Ä‚¢‚Ü‚·: !previous_policy!
+    echo ä»¥å‰ã®å®Ÿè¡Œãƒãƒªã‚·ãƒ¼ã‚’å¾©å…ƒã—ã¦ã„ã¾ã™: !previous_policy!
     powershell.exe -Command "Set-ExecutionPolicy '!previous_policy!' -Scope CurrentUser -Force"
 ) else (
-    echo ƒ|ƒŠƒV[ƒtƒ@ƒCƒ‹‚ª‘¶İ‚µ‚È‚¢‚½‚ßAÀsƒ|ƒŠƒV[‚ğ•ÏX‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B
+    echo ãƒãƒªã‚·ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã—ãªã„ãŸã‚ã€å®Ÿè¡Œãƒãƒªã‚·ãƒ¼ã‚’å¤‰æ›´ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚
     for /f "tokens=*" %%i in ('powershell.exe -Command "Get-ExecutionPolicy -Scope CurrentUser"') do set current_policy=%%i
-    echo Œ»İ‚ÌÀsƒ|ƒŠƒV[: !current_policy!
+    echo ç¾åœ¨ã®å®Ÿè¡Œãƒãƒªã‚·ãƒ¼: !current_policy!
 )
 
 powershell.exe -Command "Test-Path '%STARTUP_FOLDER%\%SHORTCUT_NAME%'"
 
 if %ERRORLEVEL% == 0 (
-    echo ƒVƒ‡[ƒgƒJƒbƒg‚ª‘¶İ‚µ‚Ü‚·Bíœ‚µ‚Ü‚·‚©H (y/n)
-    choice /c yn /m "‘I‘ğ: "
+    echo ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆãŒå­˜åœ¨ã—ã¾ã™ã€‚å‰Šé™¤ã—ã¾ã™ã‹ï¼Ÿ (y/n)
+    choice /c yn /m "é¸æŠ: "
     if errorlevel 2 goto :eof
     powershell.exe -Command "Remove-Item -Path '%STARTUP_FOLDER%\%SHORTCUT_NAME%' -Force"
-    echo ƒXƒ^[ƒgƒAƒbƒvƒVƒ‡[ƒgƒJƒbƒg‚ªíœ‚³‚ê‚Ü‚µ‚½B
+    echo ã‚¹ã‚¿ãƒ¼ãƒˆã‚¢ãƒƒãƒ—ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆãŒå‰Šé™¤ã•ã‚Œã¾ã—ãŸã€‚
 ) else (
-    echo ƒXƒ^[ƒgƒAƒbƒvƒVƒ‡[ƒgƒJƒbƒg‚Í‘¶İ‚µ‚È‚¢‚½‚ßAI—¹‚µ‚Ü‚·B
+    echo ã‚¹ã‚¿ãƒ¼ãƒˆã‚¢ãƒƒãƒ—ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆã¯å­˜åœ¨ã—ãªã„ãŸã‚ã€çµ‚äº†ã—ã¾ã™ã€‚
 )
 
 pause
