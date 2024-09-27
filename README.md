@@ -41,7 +41,7 @@ Windowsの通知トレイに常駐し、プロンプトが簡単に管理でき�
    注意: PowerShellの実行ポリシーの変更は、セキュリティ上の理由から必要です。この変更により、署名されていないローカルスクリプトの実行が可能になりますが、リモートからダウンロードしたスクリプトは引き続き署名が必要となります。
 2. Windowsを再起動、またはスタートアップに登録したアプリケーションのショートカットを実行（ダブルクリック）します。
     ```
-    %APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\PromptManager.lnk"
+    %APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\PromptManager.lnk
     ```
 
 3. 通知トレイにアプリケーションのアイコンが表示されます。
