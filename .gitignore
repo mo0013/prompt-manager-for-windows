@@ -1,0 +1,11 @@
+# Markdownファイルを除外
+*.md
+
+# 特定のMarkdownファイルを含める
+!README.md
+
+# dataディレクトリ内のMarkdownファイルのみを除外
+data/**/*.md
+
+# powershell_policy_before_change.txtファイルを除外
+tootls/powershell_policy_before_change.txt
