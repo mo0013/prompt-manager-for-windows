@@ -294,7 +294,9 @@ function Show-NewPromptForm {
                 [System.Windows.Forms.MessageBoxButtons]::OK, 
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
-            
+
+            # カテゴリリストを更新
+            Update-CategoryList
             # メインウィンドウのリストボックスを更新
             Update-PromptList
             
@@ -570,8 +572,12 @@ function Remove-SelectedPrompt {
                     [System.Windows.Forms.MessageBoxButtons]::OK, 
                     [System.Windows.Forms.MessageBoxIcon]::Information
                 )
+
+                # カテゴリリストを更新
+                Update-CategoryList
                 # リストボックスを更新
                 Update-PromptList
+                
             } else {
                 [System.Windows.Forms.MessageBox]::Show(
                     "プロンプトの削除に失敗しました。", 
