@@ -4,8 +4,9 @@
 # 特定のMarkdownファイルを含める
 !README.md
 
-# dataディレクトリ内のMarkdownファイルのみを除外
+# dataディレクトリ内のMarkdownファイルのみを除外（サンプルディレクトリを除く）
 data/**/*.md
+!data/サンプル/**/*.md
 
 # powershell_policy_before_change.txtファイルを除外
 tools/powershell_policy_before_change.txt
