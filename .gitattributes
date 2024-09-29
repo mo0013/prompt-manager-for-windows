@@ -1,0 +1,2 @@
+# バッチファイルとMarkdownファイルの改行コードをCRLFに設定
+*.bat text eol=crlf
