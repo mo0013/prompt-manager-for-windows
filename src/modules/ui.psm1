@@ -28,6 +28,9 @@ $script:CopyButton = $null
 $script:TrayIcon = $null
 $script:IsExiting = $false
 
+# グローバル変数にフィルタリングされたプロンプトリストを追加
+$script:FilteredPrompts = @()
+
 function Initialize-TrayIcon {
     <#
     .SYNOPSIS
@@ -78,13 +81,13 @@ function Show-PromptManagerMainWindow {
         # メインフォームの作成
         $script:MainForm = New-Object System.Windows.Forms.Form
         $script:MainForm.Text = "プロンプト管理アプリ"
-        $script:MainForm.Size = New-Object System.Drawing.Size(500,300)
+        $script:MainForm.Size = New-Object System.Drawing.Size(500,350)
         $script:MainForm.StartPosition = "CenterScreen"
 
         # リストボックスの作成
         $script:PromptListBox = New-Object System.Windows.Forms.ListBox
         $script:PromptListBox.Location = New-Object System.Drawing.Point(10,10)
-        $script:PromptListBox.Size = New-Object System.Drawing.Size(360,240)
+        $script:PromptListBox.Size = New-Object System.Drawing.Size(360,300) 
         $script:PromptListBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
                                       [System.Windows.Forms.AnchorStyles]::Bottom -bor 
                                       [System.Windows.Forms.AnchorStyles]::Left -bor 
@@ -149,14 +152,24 @@ function Show-PromptManagerMainWindow {
         $script:CategoryFilter.Add_SelectedIndexChanged({ Update-PromptList })
         $script:MainForm.Controls.Add($script:CategoryFilter)
         $script:PromptListBox.Location = New-Object System.Drawing.Point(10, 40)
-        $script:PromptListBox.Size = New-Object System.Drawing.Size(360, 210)
+        $script:PromptListBox.Size = New-Object System.Drawing.Size(360, 260) 
 
         # プロンプトリストの更新
         Update-PromptList
 
-        # 終了ボタンの追加
+        # カテゴリ管理ボタンの作成
+        $categoryManageButton = New-Object System.Windows.Forms.Button
+        $categoryManageButton.Location = New-Object System.Drawing.Point(380, 210)
+        $categoryManageButton.Size = New-Object System.Drawing.Size(100, 30)
+        $categoryManageButton.Text = "カテゴリ管理"
+        $categoryManageButton.Add_Click({ Show-CategoryManagementForm })
+        $categoryManageButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
+                                       [System.Windows.Forms.AnchorStyles]::Right
+        $script:MainForm.Controls.Add($categoryManageButton)
+
+        # 終了ボタンの追加（1つ分の空間を空けて配置）
         $exitButton = New-Object System.Windows.Forms.Button
-        $exitButton.Location = New-Object System.Drawing.Point(380, 220)
+        $exitButton.Location = New-Object System.Drawing.Point(380, 270)
         $exitButton.Size = New-Object System.Drawing.Size(100, 30)
         $exitButton.Text = "終了"
         $exitButton.Add_Click({ 
@@ -164,7 +177,7 @@ function Show-PromptManagerMainWindow {
                 $script:MainForm.Hide()
             }
         })
-        $exitButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor 
+        $exitButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
                              [System.Windows.Forms.AnchorStyles]::Right
         $script:MainForm.Controls.Add($exitButton)
 
@@ -331,21 +344,77 @@ function Edit-SelectedPrompt {
         選択されたプロンプトを編集します。
     .DESCRIPTION
         リストボックスで選択されたプロンプトの編集フォームを表示し、
-        内容を編集して保存することができます。
+        内容とカテゴリを編集して保存することができます。
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $editForm = New-Object System.Windows.Forms.Form
         $editForm.Text = "プロンプト編集"
-        $editForm.Size = New-Object System.Drawing.Size(400, 350)
+        $editForm.Size = New-Object System.Drawing.Size(600, 500)  # フォームのサイズを大きくしました
         $editForm.StartPosition = "CenterScreen"
+
+        # 現在のカテゴリを表示するラベル
+        $currentCategoryLabel = New-Object System.Windows.Forms.Label
+        $currentCategoryLabel.Location = New-Object System.Drawing.Point(10, 10)
+        $currentCategoryLabel.Size = New-Object System.Drawing.Size(200, 20)
+        $currentCategoryLabel.Text = "現在のカテゴリ: $($selectedPrompt.Category)"
+        $editForm.Controls.Add($currentCategoryLabel)
+
+        # カテゴリ選択用ラジオボタン
+        $existingCategoryRadio = New-Object System.Windows.Forms.RadioButton
+        $existingCategoryRadio.Location = New-Object System.Drawing.Point(220, 10)
+        $existingCategoryRadio.Size = New-Object System.Drawing.Size(120, 20)
+        $existingCategoryRadio.Text = "既存のカテゴリ"
+        $existingCategoryRadio.Checked = $true
+        $editForm.Controls.Add($existingCategoryRadio)
+
+        $newCategoryRadio = New-Object System.Windows.Forms.RadioButton
+        $newCategoryRadio.Location = New-Object System.Drawing.Point(350, 10)
+        $newCategoryRadio.Size = New-Object System.Drawing.Size(120, 20)
+        $newCategoryRadio.Text = "新しいカテゴリ"
+        $editForm.Controls.Add($newCategoryRadio)
+
+        # 既存カテゴリ選択用コンボボックス
+        $categoryComboBox = New-Object System.Windows.Forms.ComboBox
+        $categoryComboBox.Location = New-Object System.Drawing.Point(220, 35)
+        $categoryComboBox.Size = New-Object System.Drawing.Size(250, 20)
+        $categoryComboBox.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+        $categories = Get-ChildItem -Path "data" -Directory | Select-Object -ExpandProperty Name
+        $categoryComboBox.Items.AddRange($categories)
+        $categoryComboBox.SelectedItem = $selectedPrompt.Category
+        $editForm.Controls.Add($categoryComboBox)
+
+        # 新しいカテゴリ入力用テキストボックス
+        $newCategoryTextBox = New-Object System.Windows.Forms.TextBox
+        $newCategoryTextBox.Location = New-Object System.Drawing.Point(220, 60)
+        $newCategoryTextBox.Size = New-Object System.Drawing.Size(250, 20)
+        $newCategoryTextBox.Enabled = $false
+        $editForm.Controls.Add($newCategoryTextBox)
+
+        # ラジオボタンの状態変更時の処理
+        $existingCategoryRadio.Add_CheckedChanged({
+            $categoryComboBox.Enabled = $existingCategoryRadio.Checked
+            $newCategoryTextBox.Enabled = -not $existingCategoryRadio.Checked
+        })
+
+        $newCategoryRadio.Add_CheckedChanged({
+            $categoryComboBox.Enabled = -not $newCategoryRadio.Checked
+            $newCategoryTextBox.Enabled = $newCategoryRadio.Checked
+        })
+
+        # プロンプトラベル
+        $promptLabel = New-Object System.Windows.Forms.Label
+        $promptLabel.Location = New-Object System.Drawing.Point(10, 90)
+        $promptLabel.Size = New-Object System.Drawing.Size(100, 20)
+        $promptLabel.Text = "プロンプト"
+        $editForm.Controls.Add($promptLabel)
 
         $textBox = New-Object System.Windows.Forms.TextBox
         $textBox.Multiline = $true
         $textBox.ScrollBars = "Vertical"
-        $textBox.Size = New-Object System.Drawing.Size(380, 260)
-        $textBox.Location = New-Object System.Drawing.Point(10, 10)
+        $textBox.Size = New-Object System.Drawing.Size(570, 300)  # テキストボックスのサイズを大きくしました
+        $textBox.Location = New-Object System.Drawing.Point(10, 110)
         $textBox.Text = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetBytes($selectedPrompt.Content))
         $textBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
                           [System.Windows.Forms.AnchorStyles]::Bottom -bor 
@@ -359,8 +428,39 @@ function Edit-SelectedPrompt {
         $saveButton.Size = New-Object System.Drawing.Size(100, 30)
         $saveButton.Text = "保存"
         $saveButton.Add_Click({
+            $newCategory = if ($existingCategoryRadio.Checked) {
+                $categoryComboBox.SelectedItem
+            } else {
+                $newCategoryTextBox.Text.Trim()
+            }
+
+            if ([string]::IsNullOrWhiteSpace($newCategory)) {
+                [System.Windows.Forms.MessageBox]::Show("カテゴリを選択または入力してください。", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                return
+            }
+
+            $oldFilePath = $selectedPrompt.FilePath
             $selectedPrompt.Content = $textBox.Text
+            $selectedPrompt.Category = $newCategory
+
+            # カテゴリフォルダが存在しない場合は作成
+            $categoryPath = Join-Path "data" $newCategory
+            if (-not (Test-Path $categoryPath)) {
+                New-Item -ItemType Directory -Path $categoryPath | Out-Null
+            }
+
+            # 新しいファイルパスを設定
+            $newFileName = Join-Path -Path $newCategory -ChildPath (Split-Path -Leaf $selectedPrompt.FileName)
+            $selectedPrompt.FileName = $newFileName
+            $selectedPrompt.FilePath = Join-Path -Path "data" -ChildPath $newFileName
+
             Save-Prompt $selectedPrompt
+            
+            # 古いファイルを削除（カテゴリが変更された場合）
+            if ($oldFilePath -ne $selectedPrompt.FilePath) {
+                Remove-Item -Path $oldFilePath -Force
+            }
+
             [System.Windows.Forms.MessageBox]::Show(
                 "プロンプトが保存されました。", 
                 "保存完了", 
@@ -368,7 +468,8 @@ function Edit-SelectedPrompt {
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
             $editForm.Close()
-            # リストボックスを更新
+            # カテゴリリストとプロンプトリストを更新
+            Update-CategoryList
             Update-PromptList
         })
 
@@ -381,12 +482,6 @@ function Edit-SelectedPrompt {
 
         # ボタンを配置する関数
         function Update-ButtonPositions {
-            <#
-            .SYNOPSIS
-                保存ボタンとキャンセルボタンをフォームの中央下に配置します。
-            .DESCRIPTION
-                フォームのサイズ変更イベントなどで呼び出され、ボタンの位置を更新します。
-            #>
             $buttonSpacing = 10
             $totalWidth = $saveButton.Width + $cancelButton.Width + $buttonSpacing
             $startX = ($editForm.ClientSize.Width - $totalWidth) / 2
@@ -430,7 +525,7 @@ function Show-PromptPreview {
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $previewForm = New-Object System.Windows.Forms.Form
         $previewForm.Text = "プロンプトプレビュー"
         $previewForm.Size = New-Object System.Drawing.Size(400,300)
@@ -474,7 +569,7 @@ function Copy-SelectedPrompt {
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $result = Copy-TextToClipboard -Text $selectedPrompt.Content
         if ($result.Success) {
             [System.Windows.Forms.MessageBox]::Show(
@@ -508,16 +603,18 @@ function Update-PromptList {
         プロンプトリストを更新します。
     .DESCRIPTION
         Get-Prompts 関数を使用して最新のプロンプト一覧を取得し、
-        リストボックスの内容を更新します。
+        リストボックスの内容を更新します。フィルタリングされたプロンプトリストも保持します。
     #>
     $script:PromptListBox.Items.Clear()
-    $prompts = Get-Prompts -Encoding UTF8
+    $allPrompts = Get-Prompts -Encoding UTF8
     $selectedCategory = $script:CategoryFilter.SelectedItem
 
-    foreach ($prompt in $prompts) {
+    $script:FilteredPrompts = @()
+    foreach ($prompt in $allPrompts) {
         if ($selectedCategory -eq "すべて" -or $prompt.Category -eq $selectedCategory) {
             $displayText = "$($prompt.Category): $($prompt.Title)"
             [void]$script:PromptListBox.Items.Add($displayText)
+            $script:FilteredPrompts += $prompt
         }
     }
 }
@@ -556,7 +653,7 @@ function Remove-SelectedPrompt {
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $result = [System.Windows.Forms.MessageBox]::Show(
             "本当に「$($selectedPrompt.Title)」を削除しますか？",
             "削除の確認",
@@ -614,4 +711,187 @@ function Exit-Application {
     [System.Windows.Forms.Application]::Exit()
 }
 
-Export-ModuleMember -Function Show-PromptManagerMainWindow, Show-PromptPreview, Edit-SelectedPrompt, Copy-SelectedPrompt, Show-SettingsForm, Show-NewPromptForm, Initialize-TrayIcon, Exit-Application
+function Show-CategoryManagementForm {
+    <#
+    .SYNOPSIS
+        カテゴリ管理フォームを表示します。
+    .DESCRIPTION
+        カテゴリの一覧表示、編集、削除などの機能を提供するフォームを表示します。
+    #>
+    
+    # カテゴリ管理フォームの作成
+    $categoryForm = New-Object System.Windows.Forms.Form
+    $categoryForm.Text = "カテゴリ管理"
+    $categoryForm.Size = New-Object System.Drawing.Size(400,300)
+    $categoryForm.StartPosition = "CenterScreen"
+
+    # カテゴリ一覧を表示するListBoxの作成
+    $categoryListBox = New-Object System.Windows.Forms.ListBox
+    $categoryListBox.Location = New-Object System.Drawing.Point(10,10)
+    $categoryListBox.Size = New-Object System.Drawing.Size(260,240)
+    $categoryListBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
+                              [System.Windows.Forms.AnchorStyles]::Bottom -bor 
+                              [System.Windows.Forms.AnchorStyles]::Left -bor 
+                              [System.Windows.Forms.AnchorStyles]::Right
+    $categoryForm.Controls.Add($categoryListBox)
+
+    # 編集ボタンの作成
+    $editButton = New-Object System.Windows.Forms.Button
+    $editButton.Location = New-Object System.Drawing.Point(280,10)
+    $editButton.Size = New-Object System.Drawing.Size(100,30)
+    $editButton.Text = "編集"
+    $editButton.Add_Click({
+        $selectedCategory = $categoryListBox.SelectedItem
+        if ($selectedCategory) {
+            $newName = [Microsoft.VisualBasic.Interaction]::InputBox("新しいカテゴリ名を入力してください", "カテゴリ名の編集", $selectedCategory)
+            if ($newName -and ($newName -ne $selectedCategory)) {
+                $result = Rename-Category -OldName $selectedCategory -NewName $newName
+                if ($result) {
+                    [System.Windows.Forms.MessageBox]::Show("カテゴリ名を変更しました。", "成功", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                    Update-CategoryListBox
+                    Update-CategoryList
+                    Update-PromptList
+                } else {
+                    [System.Windows.Forms.MessageBox]::Show("カテゴリ名の変更に失敗しました。", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                }
+            }
+        } else {
+            [System.Windows.Forms.MessageBox]::Show("カテゴリを選択してください。", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        }
+    })
+    $categoryForm.Controls.Add($editButton)
+
+    # 削除ボタンの作成
+    $deleteButton = New-Object System.Windows.Forms.Button
+    $deleteButton.Location = New-Object System.Drawing.Point(280,50)
+    $deleteButton.Size = New-Object System.Drawing.Size(100,30)
+    $deleteButton.Text = "削除"
+    $deleteButton.Add_Click({
+        $selectedCategory = $categoryListBox.SelectedItem
+        if ($selectedCategory) {
+            $result = Remove-Category -CategoryName $selectedCategory
+            if ($result) {
+                [System.Windows.Forms.MessageBox]::Show("カテゴリを削除しました。", "成功", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                Update-CategoryListBox
+                Update-CategoryList
+                Update-PromptList
+            } else {
+                [System.Windows.Forms.MessageBox]::Show("カテゴリの削除に失敗しました。フォルダが空でない可能性があります。", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+            }
+        } else {
+            [System.Windows.Forms.MessageBox]::Show("カテゴリを選択してください。", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        }
+    })
+    $categoryForm.Controls.Add($deleteButton)
+
+    # カテゴリ一覧を取得して表示する関数
+    function Update-CategoryListBox {
+        $categoryListBox.Items.Clear()
+        $categories = Get-CategoryList
+        foreach ($category in $categories) {
+            $categoryListBox.Items.Add($category)
+        }
+    }
+
+    # 初期表示時にカテゴリ一覧を更新
+    Update-CategoryListBox
+
+    # フォームを表示
+    $categoryForm.ShowDialog()
+}
+
+function Get-CategoryList {
+    <#
+    .SYNOPSIS
+        カテゴリの一覧を取得します。
+    .DESCRIPTION
+        dataフォルダ内のサブフォルダ名をカテゴリとして取得します。
+    #>
+    $categories = Get-ChildItem -Path "data" -Directory | Select-Object -ExpandProperty Name
+    return $categories
+}
+
+function Rename-Category {
+    <#
+    .SYNOPSIS
+        カテゴリ名を変更します。
+    .DESCRIPTION
+        指定された古いカテゴリ名を新しいカテゴリ名に変更し、
+        関連するプロンプトファイルも移動します。
+    .PARAMETER OldName
+        変更前のカテゴリ名
+    .PARAMETER NewName
+        変更後のカテゴリ名
+    .RETURNS
+        成功した場合は $true、失敗した場合は $false を返します。
+    #>
+    param(
+        [string]$OldName,
+        [string]$NewName
+    )
+
+    try {
+        $oldPath = Join-Path "data" $OldName
+        $newPath = Join-Path "data" $NewName
+
+        # カテゴリフォルダの名前を変更
+        Rename-Item -Path $oldPath -NewName $NewName -ErrorAction Stop
+
+        # プロンプトファイルのカテゴリ情報を更新
+        $promptFiles = Get-ChildItem -Path $newPath -Filter "*.md"
+        foreach ($file in $promptFiles) {
+            $content = Get-Content $file.FullName -Raw -Encoding UTF8
+            $updatedContent = $content -replace "Category:\s*$OldName", "Category: $NewName"
+            Set-Content -Path $file.FullName -Value $updatedContent -NoNewline -Encoding UTF8
+        }
+
+        return $true
+    }
+    catch {
+        Write-Error "カテゴリ名の変更中にエラーが発生しました: $_"
+        return $false
+    }
+}
+
+function Remove-Category {
+    <#
+    .SYNOPSIS
+        空のカテゴリを削除します。
+    .DESCRIPTION
+        指定されたカテゴリが空の場合のみ、そのカテゴリを削除します。
+    .PARAMETER CategoryName
+        削除するカテゴリ名
+    .RETURNS
+        成功した場合は $true、失敗した場合は $false を返します。
+    #>
+    param(
+        [string]$CategoryName
+    )
+
+    try {
+        $categoryPath = Join-Path "data" $CategoryName
+
+        # カテゴリフォルダが存在するか確認
+        if (-not (Test-Path $categoryPath)) {
+            Write-Error "指定されたカテゴリが存在しません: $CategoryName"
+            return $false
+        }
+
+        # フォルダが空かどうか確認
+        $files = Get-ChildItem -Path $categoryPath -File
+        if ($files.Count -gt 0) {
+            Write-Error "カテゴリフォルダが空ではありません: $CategoryName"
+            return $false
+        }
+
+        # 空のフォルダを削除
+        Remove-Item -Path $categoryPath -Force -Recurse
+        return $true
+    }
+    catch {
+        Write-Error "カテゴリの削除中にエラーが発生しました: $_"
+        return $false
+    }
+}
+
+Export-ModuleMember -Function Show-PromptManagerMainWindow, Show-PromptPreview, Edit-SelectedPrompt, Copy-SelectedPrompt, Show-SettingsForm, Show-NewPromptForm, Initialize-TrayIcon, Exit-Application, Show-CategoryManagementForm
