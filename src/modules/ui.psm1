@@ -15,7 +15,6 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # クリップボードモジュールをインポート
 Import-Module "$scriptPath\clipboard.psm1"
-Import-Module "$scriptPath\category.psm1"
 
 # Windows Formsの名前空間をインポート
 Add-Type -AssemblyName System.Windows.Forms
