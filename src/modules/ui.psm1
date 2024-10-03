@@ -28,6 +28,9 @@ $script:CopyButton = $null
 $script:TrayIcon = $null
 $script:IsExiting = $false
 
+# グローバル変数にフィルタリングされたプロンプトリストを追加
+$script:FilteredPrompts = @()
+
 function Initialize-TrayIcon {
     <#
     .SYNOPSIS
@@ -345,7 +348,7 @@ function Edit-SelectedPrompt {
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $editForm = New-Object System.Windows.Forms.Form
         $editForm.Text = "プロンプト編集"
         $editForm.Size = New-Object System.Drawing.Size(600, 500)  # フォームのサイズを大きくしました
@@ -522,7 +525,7 @@ function Show-PromptPreview {
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $previewForm = New-Object System.Windows.Forms.Form
         $previewForm.Text = "プロンプトプレビュー"
         $previewForm.Size = New-Object System.Drawing.Size(400,300)
@@ -566,7 +569,7 @@ function Copy-SelectedPrompt {
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $result = Copy-TextToClipboard -Text $selectedPrompt.Content
         if ($result.Success) {
             [System.Windows.Forms.MessageBox]::Show(
@@ -600,16 +603,18 @@ function Update-PromptList {
         プロンプトリストを更新します。
     .DESCRIPTION
         Get-Prompts 関数を使用して最新のプロンプト一覧を取得し、
-        リストボックスの内容を更新します。
+        リストボックスの内容を更新します。フィルタリングされたプロンプトリストも保持します。
     #>
     $script:PromptListBox.Items.Clear()
-    $prompts = Get-Prompts -Encoding UTF8
+    $allPrompts = Get-Prompts -Encoding UTF8
     $selectedCategory = $script:CategoryFilter.SelectedItem
 
-    foreach ($prompt in $prompts) {
+    $script:FilteredPrompts = @()
+    foreach ($prompt in $allPrompts) {
         if ($selectedCategory -eq "すべて" -or $prompt.Category -eq $selectedCategory) {
             $displayText = "$($prompt.Category): $($prompt.Title)"
             [void]$script:PromptListBox.Items.Add($displayText)
+            $script:FilteredPrompts += $prompt
         }
     }
 }
@@ -648,7 +653,7 @@ function Remove-SelectedPrompt {
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
-        $selectedPrompt = (Get-Prompts -Encoding UTF8)[$selectedIndex]
+        $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $result = [System.Windows.Forms.MessageBox]::Show(
             "本当に「$($selectedPrompt.Title)」を削除しますか？",
             "削除の確認",
@@ -743,6 +748,7 @@ function Show-CategoryManagementForm {
                 $result = Rename-Category -OldName $selectedCategory -NewName $newName
                 if ($result) {
                     [System.Windows.Forms.MessageBox]::Show("カテゴリ名を変更しました。", "成功", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                    Update-CategoryListBox
                     Update-CategoryList
                     Update-PromptList
                 } else {
@@ -766,6 +772,7 @@ function Show-CategoryManagementForm {
             $result = Remove-Category -CategoryName $selectedCategory
             if ($result) {
                 [System.Windows.Forms.MessageBox]::Show("カテゴリを削除しました。", "成功", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                Update-CategoryListBox
                 Update-CategoryList
                 Update-PromptList
             } else {
@@ -778,7 +785,7 @@ function Show-CategoryManagementForm {
     $categoryForm.Controls.Add($deleteButton)
 
     # カテゴリ一覧を取得して表示する関数
-    function Update-CategoryList {
+    function Update-CategoryListBox {
         $categoryListBox.Items.Clear()
         $categories = Get-CategoryList
         foreach ($category in $categories) {
@@ -787,7 +794,7 @@ function Show-CategoryManagementForm {
     }
 
     # 初期表示時にカテゴリ一覧を更新
-    Update-CategoryList
+    Update-CategoryListBox
 
     # フォームを表示
     $categoryForm.ShowDialog()
