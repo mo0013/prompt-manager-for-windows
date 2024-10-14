@@ -167,9 +167,19 @@ function Show-PromptManagerMainWindow {
                                        [System.Windows.Forms.AnchorStyles]::Right
         $script:MainForm.Controls.Add($categoryManageButton)
 
+        # API Key設定ボタンの作成
+        $apiKeySettingsButton = New-Object System.Windows.Forms.Button
+        $apiKeySettingsButton.Location = New-Object System.Drawing.Point(380, 250)
+        $apiKeySettingsButton.Size = New-Object System.Drawing.Size(100, 30)
+        $apiKeySettingsButton.Text = "API Key設定"
+        $apiKeySettingsButton.Add_Click({ Show-ApiKeySettingsForm })
+        $apiKeySettingsButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
+                                       [System.Windows.Forms.AnchorStyles]::Right
+        $script:MainForm.Controls.Add($apiKeySettingsButton)
+
         # 終了ボタンの追加（1つ分の空間を空けて配置）
         $exitButton = New-Object System.Windows.Forms.Button
-        $exitButton.Location = New-Object System.Drawing.Point(380, 270)
+        $exitButton.Location = New-Object System.Drawing.Point(380, 290)
         $exitButton.Size = New-Object System.Drawing.Size(100, 30)
         $exitButton.Text = "終了"
         $exitButton.Add_Click({ 
@@ -893,5 +903,64 @@ function Remove-Category {
         return $false
     }
 }
+
+function Show-ApiKeySettingsForm {
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "API Key設定"
+    $form.Size = New-Object System.Drawing.Size(300,200)
+    $form.StartPosition = "CenterScreen"
+
+    $openAILabel = New-Object System.Windows.Forms.Label
+    $openAILabel.Location = New-Object System.Drawing.Point(10,20)
+    $openAILabel.Size = New-Object System.Drawing.Size(80,20)
+    $openAILabel.Text = "OpenAI:"
+    $form.Controls.Add($openAILabel)
+
+    $openAITextBox = New-Object System.Windows.Forms.TextBox
+    $openAITextBox.Location = New-Object System.Drawing.Point(100,20)
+    $openAITextBox.Size = New-Object System.Drawing.Size(180,20)
+    $openAITextBox.Text = Get-ApiKey "OpenAI"
+    $form.Controls.Add($openAITextBox)
+
+    $claudeLabel = New-Object System.Windows.Forms.Label
+    $claudeLabel.Location = New-Object System.Drawing.Point(10,50)
+    $claudeLabel.Size = New-Object System.Drawing.Size(80,20)
+    $claudeLabel.Text = "Claude:"
+    $form.Controls.Add($claudeLabel)
+
+    $claudeTextBox = New-Object System.Windows.Forms.TextBox
+    $claudeTextBox.Location = New-Object System.Drawing.Point(100,50)
+    $claudeTextBox.Size = New-Object System.Drawing.Size(180,20)
+    $claudeTextBox.Text = Get-ApiKey "Claude"
+    $form.Controls.Add($claudeTextBox)
+
+    $geminiLabel = New-Object System.Windows.Forms.Label
+    $geminiLabel.Location = New-Object System.Drawing.Point(10,80)
+    $geminiLabel.Size = New-Object System.Drawing.Size(80,20)
+    $geminiLabel.Text = "Gemini:"
+    $form.Controls.Add($geminiLabel)
+
+    $geminiTextBox = New-Object System.Windows.Forms.TextBox
+    $geminiTextBox.Location = New-Object System.Drawing.Point(100,80)
+    $geminiTextBox.Size = New-Object System.Drawing.Size(180,20)
+    $geminiTextBox.Text = Get-ApiKey "Gemini"
+    $form.Controls.Add($geminiTextBox)
+
+    $saveButton = New-Object System.Windows.Forms.Button
+    $saveButton.Location = New-Object System.Drawing.Point(100,120)
+    $saveButton.Size = New-Object System.Drawing.Size(75,23)
+    $saveButton.Text = "保存"
+    $saveButton.Add_Click({
+        Set-ApiKey "OpenAI" $openAITextBox.Text
+        Set-ApiKey "Claude" $claudeTextBox.Text
+        Set-ApiKey "Gemini" $geminiTextBox.Text
+        [System.Windows.Forms.MessageBox]::Show("APIキーが保存されました。")
+        $form.Close()
+    })
+    $form.Controls.Add($saveButton)
+
+    $form.ShowDialog()
+}
+
 
 Export-ModuleMember -Function Show-PromptManagerMainWindow, Show-PromptPreview, Edit-SelectedPrompt, Copy-SelectedPrompt, Show-SettingsForm, Show-NewPromptForm, Initialize-TrayIcon, Exit-Application, Show-CategoryManagementForm

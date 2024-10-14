@@ -10,3 +10,10 @@ data/**/*.md
 
 # powershell_policy_before_change.txtファイルを除外
 tools/powershell_policy_before_change.txt
+
+# testフォルダ配下のすべてのファイルとディレクトリを除外
+test/**
+
+# settings.xmlファイルを除外
+config/settings.xml
+

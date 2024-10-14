@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Settings>
+  <Paths>
+    <DataDirectory>data</DataDirectory>
+    <ConfigDirectory>config</ConfigDirectory>
+  </Paths>
+  <ApiKeys>
+    <OpenAI></OpenAI>
+    <Claude></Claude>
+    <Gemini></Gemini>
+  </ApiKeys>
+</Settings>
