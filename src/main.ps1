@@ -21,6 +21,7 @@ try {
     Import-Module -Name (Join-Path $scriptPath "modules\settings.psm1") -Force
     Import-Module -Name (Join-Path $scriptPath "modules\ui.psm1") -Force
     Import-Module -Name (Join-Path $scriptPath "modules\prompt.psm1") -Force
+    Import-Module -Name (Join-Path $scriptPath "modules\llm.psm1") -Force
 
     # 設定を初期化
     Initialize-Settings

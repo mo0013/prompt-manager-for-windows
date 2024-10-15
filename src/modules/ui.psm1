@@ -15,6 +15,7 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # クリップボードモジュールをインポート
 Import-Module "$scriptPath\clipboard.psm1"
+Import-Module "$scriptPath\llm.psm1"
 
 # Windows Formsの名前空間をインポート
 Add-Type -AssemblyName System.Windows.Forms
@@ -81,7 +82,7 @@ function Show-PromptManagerMainWindow {
         # メインフォームの作成
         $script:MainForm = New-Object System.Windows.Forms.Form
         $script:MainForm.Text = "プロンプト管理アプリ"
-        $script:MainForm.Size = New-Object System.Drawing.Size(500,350)
+        $script:MainForm.Size = New-Object System.Drawing.Size(500,370)
         $script:MainForm.StartPosition = "CenterScreen"
 
         # リストボックスの作成
@@ -152,7 +153,7 @@ function Show-PromptManagerMainWindow {
         $script:CategoryFilter.Add_SelectedIndexChanged({ Update-PromptList })
         $script:MainForm.Controls.Add($script:CategoryFilter)
         $script:PromptListBox.Location = New-Object System.Drawing.Point(10, 40)
-        $script:PromptListBox.Size = New-Object System.Drawing.Size(360, 260) 
+        $script:PromptListBox.Size = New-Object System.Drawing.Size(360, 280) 
 
         # プロンプトリストの更新
         Update-PromptList
@@ -532,20 +533,21 @@ function Show-PromptPreview {
     .DESCRIPTION
         リストボックスで選択されたプロンプトの内容を
         読み取り専用のテキストボックスで表示します。
+        また、LLMで確認するためのボタンをテキストボックスの横に配置します。
     #>
     $selectedIndex = $script:PromptListBox.SelectedIndex
     if ($selectedIndex -ge 0) {
         $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $previewForm = New-Object System.Windows.Forms.Form
         $previewForm.Text = "プロンプトプレビュー"
-        $previewForm.Size = New-Object System.Drawing.Size(400,300)
+        $previewForm.Size = New-Object System.Drawing.Size(500, 380)
         $previewForm.StartPosition = "CenterScreen"
 
         $textBox = New-Object System.Windows.Forms.TextBox
         $textBox.Multiline = $true
         $textBox.ScrollBars = "Vertical"
-        $textBox.Size = New-Object System.Drawing.Size(380,260)
-        $textBox.Location = New-Object System.Drawing.Point(10,10)
+        $textBox.Size = New-Object System.Drawing.Size(380, 330)
+        $textBox.Location = New-Object System.Drawing.Point(10, 10)
         $textBox.Text = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetBytes($selectedPrompt.Content))
         $textBox.ReadOnly = $true
         $textBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
@@ -557,6 +559,17 @@ function Show-PromptPreview {
         $textBox.Select(0, 0)
 
         $previewForm.Controls.Add($textBox)
+
+        # LLM送信ボタンの作成
+        $llmSendButton = New-Object System.Windows.Forms.Button
+        $llmSendButton.Location = New-Object System.Drawing.Point(400, 10)
+        $llmSendButton.Size = New-Object System.Drawing.Size(80, 30)
+        $llmSendButton.Text = "LLMで確認"
+        $llmSendButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
+                                [System.Windows.Forms.AnchorStyles]::Right
+        $llmSendButton.Add_Click({ Show-LLMSendForm -PromptContent $textBox.Text })
+        $previewForm.Controls.Add($llmSendButton)
+
         $previewForm.ShowDialog()
     }
     else {
@@ -962,5 +975,178 @@ function Show-ApiKeySettingsForm {
     $form.ShowDialog()
 }
 
+function Show-LLMSendForm {
+    param (
+        [string]$PromptContent
+    )
 
-Export-ModuleMember -Function Show-PromptManagerMainWindow, Show-PromptPreview, Edit-SelectedPrompt, Copy-SelectedPrompt, Show-SettingsForm, Show-NewPromptForm, Initialize-TrayIcon, Exit-Application, Show-CategoryManagementForm
+    $llmSendForm = New-Object System.Windows.Forms.Form
+    $llmSendForm.Text = "LLM送信"
+    $llmSendForm.Size = New-Object System.Drawing.Size(800, 600)
+    $llmSendForm.StartPosition = "CenterScreen"
+    $llmSendForm.AutoSize = $true
+    $llmSendForm.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+
+    # プロンプト表示エリア
+    $promptTextBox = New-Object System.Windows.Forms.TextBox
+    $promptTextBox.Location = New-Object System.Drawing.Point(10, 10)
+    $promptTextBox.Size = New-Object System.Drawing.Size(380, 560)
+    $promptTextBox.Multiline = $true
+    $promptTextBox.ScrollBars = "Vertical"
+    $promptTextBox.Text = $PromptContent
+    $promptTextBox.ReadOnly = $false
+    $llmSendForm.Controls.Add($promptTextBox)
+
+    # 右側のパネル
+    $rightPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+    $rightPanel.Location = New-Object System.Drawing.Point(400, 10)
+    $rightPanel.Size = New-Object System.Drawing.Size(380, 540)
+    $rightPanel.AutoSize = $true
+    $rightPanel.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $rightPanel.FlowDirection = [System.Windows.Forms.FlowDirection]::TopDown
+    $rightPanel.WrapContents = $false
+    $llmSendForm.Controls.Add($rightPanel)
+
+    # LLM選択チェックボックスとモデル選択ドロップダウン
+    $providers = @("OpenAI", "Claude", "Gemini")
+    $checkBoxes = [ordered]@{}
+    $modelDropDowns = [ordered]@{}
+
+    foreach ($provider in $providers) {
+        $providerPanel = New-Object System.Windows.Forms.Panel
+        $providerPanel.Size = New-Object System.Drawing.Size(360, 30)
+        $providerPanel.AutoSize = $true
+
+        $checkBox = New-Object System.Windows.Forms.CheckBox
+        $checkBox.Location = New-Object System.Drawing.Point(0, 0)
+        $checkBox.Size = New-Object System.Drawing.Size(100, 20)
+        $checkBox.Text = $provider
+        $providerPanel.Controls.Add($checkBox)
+        $checkBoxes[$provider] = $checkBox
+
+        $modelDropDown = New-Object System.Windows.Forms.ComboBox
+        $modelDropDown.Location = New-Object System.Drawing.Point(110, 0)
+        $modelDropDown.Size = New-Object System.Drawing.Size(250, 20)
+        $modelDropDown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+        $providerPanel.Controls.Add($modelDropDown)
+        $modelDropDowns[$provider] = $modelDropDown
+
+        $models = Get-LLMModels -AIProvider $provider
+        foreach ($model in $models) {
+            $modelDropDown.Items.Add($model) | Out-Null
+        }
+        if ($modelDropDown.Items.Count -gt 0) {
+            $modelDropDown.SelectedIndex = 0
+        }
+
+        $rightPanel.Controls.Add($providerPanel)
+    }
+
+    # 結果表示エリア（FlowLayoutPanel）
+    $resultFlowPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+    $resultFlowPanel.Location = New-Object System.Drawing.Point(0, ($yPos + 10))
+    $resultFlowPanel.Size = New-Object System.Drawing.Size(360, 400)
+    $resultFlowPanel.AutoSize = $true
+    $resultFlowPanel.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $resultFlowPanel.FlowDirection = [System.Windows.Forms.FlowDirection]::LeftToRight
+    $resultFlowPanel.WrapContents = $true
+    $rightPanel.Controls.Add($resultFlowPanel)
+
+    # チェックボックスの状態変更時のイベントハンドラ
+    $providers | ForEach-Object {
+        $provider = $_
+        $checkBoxes[$provider].Add_CheckedChanged({
+            UpdateResultPanel
+        })
+    }
+
+    function UpdateResultPanel {
+        $resultFlowPanel.Controls.Clear()
+        foreach ($provider in $providers) {
+            if ($checkBoxes[$provider].Checked) {
+                $resultPanel = New-Object System.Windows.Forms.Panel
+                $resultPanel.Size = New-Object System.Drawing.Size(360, 300)
+                $resultPanel.AutoSize = $true
+    
+                $providerLabel = New-Object System.Windows.Forms.Label
+                $providerLabel.Location = New-Object System.Drawing.Point(0, 0)
+                $providerLabel.Size = New-Object System.Drawing.Size(340, 20)
+                $providerLabel.Text = $provider
+                $resultPanel.Controls.Add($providerLabel)
+    
+                $resultTextBox = New-Object System.Windows.Forms.TextBox
+                $resultTextBox.Location = New-Object System.Drawing.Point(0, 25)
+                $resultTextBox.Size = New-Object System.Drawing.Size(300, 400)
+                $resultTextBox.Multiline = $true
+                $resultTextBox.ScrollBars = "Vertical"
+                $resultTextBox.ReadOnly = $true
+                $resultTextBox.Tag = $provider
+                $resultPanel.Controls.Add($resultTextBox)
+    
+                $resultFlowPanel.Controls.Add($resultPanel)
+            }
+        }
+        $llmSendForm.PerformLayout()
+        
+        # フォームのサイズを再計算
+        $newWidth = [Math]::Max(800, $rightPanel.Right + 20)
+        $newHeight = [Math]::Max(600, $rightPanel.Bottom + 40)
+        $llmSendForm.Size = New-Object System.Drawing.Size($newWidth, $newHeight)
+
+        # フォームが現在表示されているスクリーンを取得
+        $currentScreen = [System.Windows.Forms.Screen]::FromControl($llmSendForm)
+
+        # フォームの位置を現在のスクリーンの中央に調整
+        $workingArea = $currentScreen.WorkingArea
+        $newX = $workingArea.Left + [int](($workingArea.Width - $newWidth) / 2)
+        $newY = $workingArea.Top + [int](($workingArea.Height - $newHeight) / 2)
+        
+        $llmSendForm.Location = New-Object System.Drawing.Point($newX, $newY)
+    }
+
+    # 送信ボタン
+    $sendButton = New-Object System.Windows.Forms.Button
+    $sendButton.Size = New-Object System.Drawing.Size(100, 30)
+    $sendButton.Text = "送信"
+    $sendButton.Dock = [System.Windows.Forms.DockStyle]::Bottom
+    $rightPanel.Controls.Add($sendButton)
+
+    $sendButton.Add_Click({
+        $selectedProviders = $providers | Where-Object { $checkBoxes[$_].Checked }
+        if ($selectedProviders.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show("少なくとも1つのLLMを選択してください。", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+            return
+        }
+    
+        foreach ($provider in $selectedProviders) {
+            $resultTextBox = $resultFlowPanel.Controls | 
+                Where-Object { $_ -is [System.Windows.Forms.Panel] } | 
+                ForEach-Object { $_.Controls | Where-Object { $_ -is [System.Windows.Forms.TextBox] -and $_.Tag -eq $provider } } | 
+                Select-Object -First 1
+    
+            if ($resultTextBox) {
+                $selectedModel = $modelDropDowns[$provider].SelectedItem
+                $resultTextBox.Clear()
+                $resultTextBox.AppendText("${provider} (${selectedModel})に送信中..`n")
+                try {
+                    $response = Invoke-AICompletion -AIProvider $provider -Prompt $promptTextBox.Text -Model $selectedModel
+                    if ($response) {
+                        $resultTextBox.Clear()
+                        $resultTextBox.AppendText($response)
+                    } else {
+                        $resultTextBox.Clear()
+                        $resultTextBox.AppendText("応答の取得に失敗しました。")
+                    }
+                }
+                catch {
+                    $resultTextBox.Clear()
+                    $resultTextBox.AppendText("応答の取得中にエラーが発生しました: $_")
+                }
+            }
+        }
+    })
+
+    $llmSendForm.ShowDialog()
+}
+
+Export-ModuleMember -Function Show-PromptManagerMainWindow, Show-PromptPreview, Edit-SelectedPrompt, Copy-SelectedPrompt, Show-SettingsForm, Show-NewPromptForm, Initialize-TrayIcon, Exit-Application, Show-CategoryManagementForm, Show-LLMSendForm
