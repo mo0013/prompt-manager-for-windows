@@ -444,34 +444,41 @@ function Edit-SelectedPrompt {
             } else {
                 $newCategoryTextBox.Text.Trim()
             }
-
+    
             if ([string]::IsNullOrWhiteSpace($newCategory)) {
                 [System.Windows.Forms.MessageBox]::Show("カテゴリを選択または入力してください。", "エラー", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                 return
             }
-
+    
             $oldFilePath = $selectedPrompt.FilePath
+            $oldCategory = $selectedPrompt.Category
+            $categoryChanged = $oldCategory -ne $newCategory
+    
             $selectedPrompt.Content = $textBox.Text
             $selectedPrompt.Category = $newCategory
-
-            # カテゴリフォルダが存在しない場合は作成
-            $categoryPath = Join-Path "data" $newCategory
-            if (-not (Test-Path $categoryPath)) {
-                New-Item -ItemType Directory -Path $categoryPath | Out-Null
+    
+            # カテゴリが変更された場合のみ、新しいファイルパスを設定
+            if ($categoryChanged) {
+                # カテゴリフォルダが存在しない場合は作成
+                $newCategoryPath = Join-Path "data" $newCategory
+                if (-not (Test-Path $newCategoryPath)) {
+                    New-Item -ItemType Directory -Path $newCategoryPath | Out-Null
+                }
+    
+                # 新しいファイル名とパスを設定
+                $newFileName = Split-Path -Leaf $selectedPrompt.FileName
+                $selectedPrompt.FileName = Join-Path $newCategory $newFileName
+                $selectedPrompt.FilePath = Join-Path "data" $selectedPrompt.FileName
             }
-
-            # 新しいファイルパスを設定
-            $newFileName = Join-Path -Path $newCategory -ChildPath (Split-Path -Leaf $selectedPrompt.FileName)
-            $selectedPrompt.FileName = $newFileName
-            $selectedPrompt.FilePath = Join-Path -Path "data" -ChildPath $newFileName
-
+    
+            # プロンプトを保存
             Save-Prompt $selectedPrompt
             
-            # 古いファイルを削除（カテゴリが変更された場合）
-            if ($oldFilePath -ne $selectedPrompt.FilePath) {
+            # カテゴリが変更された場合のみ、古いファイルを削除
+            if ($categoryChanged) {
                 Remove-Item -Path $oldFilePath -Force
             }
-
+    
             [System.Windows.Forms.MessageBox]::Show(
                 "プロンプトが保存されました。", 
                 "保存完了", 
@@ -540,13 +547,13 @@ function Show-PromptPreview {
         $selectedPrompt = $script:FilteredPrompts[$selectedIndex]
         $previewForm = New-Object System.Windows.Forms.Form
         $previewForm.Text = "プロンプトプレビュー"
-        $previewForm.Size = New-Object System.Drawing.Size(500, 380)
+        $previewForm.Size = New-Object System.Drawing.Size(500, 420)
         $previewForm.StartPosition = "CenterScreen"
 
         $textBox = New-Object System.Windows.Forms.TextBox
         $textBox.Multiline = $true
         $textBox.ScrollBars = "Vertical"
-        $textBox.Size = New-Object System.Drawing.Size(380, 330)
+        $textBox.Size = New-Object System.Drawing.Size(460, 330)
         $textBox.Location = New-Object System.Drawing.Point(10, 10)
         $textBox.Text = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetBytes($selectedPrompt.Content))
         $textBox.ReadOnly = $true
@@ -562,13 +569,23 @@ function Show-PromptPreview {
 
         # LLM送信ボタンの作成
         $llmSendButton = New-Object System.Windows.Forms.Button
-        $llmSendButton.Location = New-Object System.Drawing.Point(400, 10)
-        $llmSendButton.Size = New-Object System.Drawing.Size(80, 30)
+        $llmSendButton.Size = New-Object System.Drawing.Size(100, 30)
         $llmSendButton.Text = "LLMで確認"
-        $llmSendButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor 
-                                [System.Windows.Forms.AnchorStyles]::Right
         $llmSendButton.Add_Click({ Show-LLMSendForm -PromptContent $textBox.Text })
         $previewForm.Controls.Add($llmSendButton)
+        # ボタンを配置する関数
+        function Update-ButtonPosition {
+            $llmSendButton.Left = ($previewForm.ClientSize.Width - $llmSendButton.Width) / 2
+            $llmSendButton.Top = $previewForm.ClientSize.Height - $llmSendButton.Height - 10
+        }
+
+        # 初期位置の設定
+        Update-ButtonPosition
+
+        # フォームのリサイズイベントを設定
+        $previewForm.Add_Resize({
+            Update-ButtonPosition
+        })
 
         $previewForm.ShowDialog()
     }
