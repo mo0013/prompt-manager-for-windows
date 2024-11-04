@@ -1166,4 +1166,4 @@ function Show-LLMSendForm {
     $llmSendForm.ShowDialog()
 }
 
-Export-ModuleMember -Function Show-PromptManagerMainWindow, Show-PromptPreview, Edit-SelectedPrompt, Copy-SelectedPrompt, Show-SettingsForm, Show-NewPromptForm, Initialize-TrayIcon, Exit-Application, Show-CategoryManagementForm, Show-LLMSendForm
+Export-ModuleMember -Function Show-PromptManagerMainWindow, Show-PromptPreview, Edit-SelectedPrompt, Copy-SelectedPrompt, Show-SettingsForm, Show-NewPromptForm, Initialize-TrayIcon, Exit-Application, Show-CategoryManagementForm, Show-LLMSendForm,Export-ModuleMember
