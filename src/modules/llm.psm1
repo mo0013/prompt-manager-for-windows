@@ -1,6 +1,18 @@
-﻿# 設定を読み込む
+﻿# 設定ファイルのパスを取得
 $settingsPath = Join-Path $PSScriptRoot "..\..\config\settings.xml"
-$settings = [xml](Get-Content $settingsPath)
+
+# 設定ファイルの読み込みとエラーハンドリング
+try {
+    $settings = [xml](Get-Content $settingsPath)
+    
+    # 必須の設定ノードの存在確認
+    $llmSettingsNode = $settings.SelectSingleNode("/Settings/LLMSettings")
+    if (-not $llmSettingsNode) {
+        throw "LLM設定が見つかりません"
+    }
+} catch {
+    throw "設定ファイルの読み込みに失敗しました: $settingsPath`nエラー: $_"
+}
 
 function Get-LLMModels {
     param (

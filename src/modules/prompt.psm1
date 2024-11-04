@@ -11,7 +11,15 @@
 #>
 
 # モジュールスコープでデータフォルダパスを定義
-$script:dataFolderPath = "data"
+$settingsPath = Join-Path $PSScriptRoot "..\..\config\settings.xml"
+$settings = [xml](Get-Content $settingsPath)
+
+# 設定ノードの取得とエラーハンドリング
+$dataPathNode = $settings.SelectSingleNode("/Settings/Paths/DataDirectory")
+if (-not $dataPathNode) {
+    throw "設定ファイルにデータディレクトリパスが見つかりません: $settingsPath"
+}
+$script:dataFolderPath = $dataPathNode.InnerText
 
 function Get-Prompts {
     param (
@@ -36,7 +44,7 @@ function Get-Prompts {
     
     foreach ($file in $files) {
         $content = Get-Content -Path $file.FullName -Raw -Encoding $Encoding
-        $relativePath = $file.FullName.Substring($file.FullName.IndexOf($script:dataFolderPath) + 5)
+        $relativePath = [System.IO.Path]::GetRelativePath($script:dataFolderPath, $file.FullName)
         $promptData = ConvertFrom-PromptContent -Content $content -FileName $relativePath
         $promptData | Add-Member -MemberType NoteProperty -Name "FilePath" -Value $file.FullName
         $promptData | Add-Member -MemberType NoteProperty -Name "Category" -Value $file.Directory.Name
@@ -128,8 +136,9 @@ function Save-NewPrompt {
     $filePath = Join-Path $categoryFolder $Prompt.FileName
     $content = "# $($Prompt.Title)`n`n$($Prompt.Content)"
     
+    # BOM無しUTF-8エンコーディングを使用
     [System.Text.Encoding]::UTF8.GetBytes($content) | Set-Content -Path $filePath -Encoding Byte
-    
+    # 保存が成功した場合、プロンプトオブジェクトを返す
     if (Test-Path $filePath) {
         return $Prompt
     } else {

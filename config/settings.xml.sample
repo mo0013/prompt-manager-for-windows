@@ -2,7 +2,6 @@
 <Settings>
   <Paths>
     <DataDirectory>data</DataDirectory>
-    <ConfigDirectory>config</ConfigDirectory>
   </Paths>
   <ApiKeys>
     <OpenAI></OpenAI>
