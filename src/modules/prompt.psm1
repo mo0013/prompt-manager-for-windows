@@ -128,16 +128,22 @@ function Save-NewPrompt {
     )
 
     $categoryFolder = Join-Path $script:dataFolderPath $Prompt.Category
+    $filePath = Join-Path $categoryFolder $Prompt.FileName
+
+    # ファイルが既に存在する場合は null を返す
+    if (Test-Path $filePath) {
+        return $null
+    }
 
     if (-not (Test-Path $categoryFolder)) {
         New-Item -ItemType Directory -Path $categoryFolder | Out-Null
     }
 
-    $filePath = Join-Path $categoryFolder $Prompt.FileName
     $content = "# $($Prompt.Title)`n`n$($Prompt.Content)"
     
     # BOM無しUTF-8エンコーディングを使用
     [System.Text.Encoding]::UTF8.GetBytes($content) | Set-Content -Path $filePath -Encoding Byte
+    
     # 保存が成功した場合、プロンプトオブジェクトを返す
     if (Test-Path $filePath) {
         return $Prompt

@@ -311,9 +311,9 @@ function Show-NewPromptForm {
         }
     
         $savedPrompt = Save-NewPrompt $newPrompt
-        if ($savedPrompt) {
+        if ($null -ne $savedPrompt) {
             [System.Windows.Forms.MessageBox]::Show(
-                "新しいプロンプトを保存しました。", 
+                "新しいプロンプトを保存しました。: $($savedPrompt)", 
                 "保存完了", 
                 [System.Windows.Forms.MessageBoxButtons]::OK, 
                 [System.Windows.Forms.MessageBoxIcon]::Information
@@ -327,7 +327,7 @@ function Show-NewPromptForm {
             $newPromptForm.Close()
         } else {
             [System.Windows.Forms.MessageBox]::Show(
-                "プロンプトの保存に失敗しました。", 
+                "プロンプトの保存に失敗しました。ファイル名を確認してください。", 
                 "エラー", 
                 [System.Windows.Forms.MessageBoxButtons]::OK, 
                 [System.Windows.Forms.MessageBoxIcon]::Error
