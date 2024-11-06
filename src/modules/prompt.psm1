@@ -10,6 +10,17 @@
     BOM無しUTF-8エンコーディングを使用してファイルの読み書きを行います。
 #>
 
+# モジュールスコープでデータフォルダパスを定義
+$settingsPath = Join-Path $PSScriptRoot "..\..\config\settings.xml"
+$settings = [xml](Get-Content $settingsPath)
+
+# 設定ノードの取得とエラーハンドリング
+$dataPathNode = $settings.SelectSingleNode("/Settings/Paths/DataDirectory")
+if (-not $dataPathNode) {
+    throw "設定ファイルにデータディレクトリパスが見つかりません: $settingsPath"
+}
+$script:dataFolderPath = $dataPathNode.InnerText
+
 function Get-Prompts {
     param (
         [Parameter(Mandatory=$false)]
@@ -28,12 +39,12 @@ function Get-Prompts {
     #>
     $prompts = New-Object System.Collections.ArrayList
 
-    # "data" フォルダ内のすべての .md ファイルを取得
-    $files = Get-ChildItem -Path "data" -Filter "*.md" -Recurse
+    # $script:dataFolderPath を使用
+    $files = Get-ChildItem -Path $script:dataFolderPath -Filter "*.md" -Recurse
     
     foreach ($file in $files) {
         $content = Get-Content -Path $file.FullName -Raw -Encoding $Encoding
-        $relativePath = $file.FullName.Substring($file.FullName.IndexOf("data") + 5)
+        $relativePath = [System.IO.Path]::GetRelativePath($script:dataFolderPath, $file.FullName)
         $promptData = ConvertFrom-PromptContent -Content $content -FileName $relativePath
         $promptData | Add-Member -MemberType NoteProperty -Name "FilePath" -Value $file.FullName
         $promptData | Add-Member -MemberType NoteProperty -Name "Category" -Value $file.Directory.Name
@@ -87,16 +98,14 @@ function Save-Prompt {
         [Parameter(Mandatory=$true)]
         [PSCustomObject]$Prompt
     )
-    $dataFolder = "data"
-    $filePath = Join-Path -Path $dataFolder -ChildPath $Prompt.FileName
+    $filePath = Join-Path -Path $script:dataFolderPath -ChildPath $Prompt.FileName
 
-    # ファイルのディレクトリが存在しない場合は作成
+    # ディレクトリチェックと作成
     $directory = Split-Path -Parent $filePath
     if (-not (Test-Path $directory)) {
         New-Item -ItemType Directory -Path $directory | Out-Null
     }
 
-    # BOM無しUTF-8エンコーディングを指定
     $content = "# $($Prompt.Title)`n`n$($Prompt.Content)"
     [System.Text.Encoding]::UTF8.GetBytes($content) | Set-Content -Path $filePath -Encoding Byte
 }
@@ -118,18 +127,23 @@ function Save-NewPrompt {
         [PSCustomObject]$Prompt
     )
 
-    $dataFolder = "data"
-    $categoryFolder = Join-Path $dataFolder $Prompt.Category
+    $categoryFolder = Join-Path $script:dataFolderPath $Prompt.Category
+    $filePath = Join-Path $categoryFolder $Prompt.FileName
+
+    # ファイルが既に存在する場合は null を返す
+    if (Test-Path $filePath) {
+        return $null
+    }
 
     if (-not (Test-Path $categoryFolder)) {
         New-Item -ItemType Directory -Path $categoryFolder | Out-Null
     }
 
-    $filePath = Join-Path $categoryFolder $Prompt.FileName
     $content = "# $($Prompt.Title)`n`n$($Prompt.Content)"
     
     # BOM無しUTF-8エンコーディングを使用
     [System.Text.Encoding]::UTF8.GetBytes($content) | Set-Content -Path $filePath -Encoding Byte
+    
     # 保存が成功した場合、プロンプトオブジェクトを返す
     if (Test-Path $filePath) {
         return $Prompt

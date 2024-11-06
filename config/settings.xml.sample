@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Settings>
+  <Paths>
+    <DataDirectory>data</DataDirectory>
+  </Paths>
+  <ApiKeys>
+    <OpenAI></OpenAI>
+    <Claude></Claude>
+    <Gemini></Gemini>
+  </ApiKeys>
+  <LLMSettings>
+    <OpenAI>
+      <Endpoint>https://api.openai.com/v1/chat/completions</Endpoint>
+      <Models>
+        <Model>gpt-4o-mini</Model>
+        <Model>gpt-4o</Model>
+        <Model>o1-preview</Model>
+        <Model>o1-mini</Model>
+      </Models>
+    </OpenAI>
+    <Claude>
+      <Endpoint>https://api.anthropic.com/v1/messages</Endpoint>
+      <Models>
+        <Model>claude-3-5-sonnet-20240620</Model>
+        <Model>claude-3-opus-20240229</Model>
+        <Model>claude-3-haiku-20240307</Model>
+      </Models>
+    </Claude>
+    <Gemini>
+      <Endpoint>https://generativelanguage.googleapis.com/v1beta/models/{0}:generateContent</Endpoint>
+      <Models>
+        <Model>gemini-1.5-flash</Model>
+        <Model>gemini-1.5-pro</Model>
+      </Models>
+    </Gemini>
+  </LLMSettings>
+</Settings>

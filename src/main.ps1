@@ -18,10 +18,15 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # モジュール読み込みのエラー処理を追加
 try {
+    Import-Module -Name (Join-Path $scriptPath "modules\settings.psm1") -Force
     Import-Module -Name (Join-Path $scriptPath "modules\ui.psm1") -Force
     Import-Module -Name (Join-Path $scriptPath "modules\prompt.psm1") -Force
+    Import-Module -Name (Join-Path $scriptPath "modules\llm.psm1") -Force
+
+    # 設定を初期化
+    Initialize-Settings
 } catch {
-    Write-Error "モジュールの読み込みに失敗しました: $_"
+    Write-Error "モジュールの読み込みまたは設定の初期化に失敗しました: $_"
     exit
 }
 
