@@ -122,11 +122,29 @@ function Invoke-APIRequest {
     param(
         [string]$Endpoint,
         [hashtable]$Headers,
-        [object]$Body
+        [object]$Body,
+        [int]$Timeout = 30
     )
-    $jsonBody = $Body | ConvertTo-Json -Depth 10
-    $jsonBodyBytes = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
-    return Invoke-RestMethod -Uri $Endpoint -Method Post -Headers $Headers -Body $jsonBodyBytes -ContentType "application/json; charset=utf-8" -ErrorAction Stop
+
+    try {
+        $jsonBody = $Body | ConvertTo-Json -Depth 10
+        $jsonBodyBytes = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+        
+        $response = Invoke-RestMethod `
+            -Uri $Endpoint `
+            -Method Post `
+            -Headers $Headers `
+            -Body $jsonBodyBytes `
+            -ContentType "application/json; charset=utf-8" `
+            -TimeoutSec $Timeout `
+            -ErrorAction Stop
+
+        return $response
+    }
+    catch {
+        Write-Error "API呼び出し中にエラーが発生しました: $($_.Exception.Message)"
+        throw
+    }
 }
 
 # すべての必要な関数をエクスポート
